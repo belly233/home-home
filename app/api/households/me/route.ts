@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import type { Prisma } from "@prisma/client"
 
 import { requireUserId } from "@/app/lib/auth"
 import { prisma } from "@/app/lib/prisma"
@@ -7,7 +8,12 @@ export async function GET() {
   try {
     const userId = await requireUserId()
 
-    const households = await prisma.member.findMany({
+    const households: Prisma.MemberGetPayload<{
+      select: {
+        role: true
+        household: { select: { id: true; name: true; createdAt: true } }
+      }
+    }>[] = await prisma.member.findMany({
       where: { userId },
       orderBy: { createdAt: "asc" },
       select: {
