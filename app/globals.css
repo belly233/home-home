@@ -1,26 +1,117 @@
 @import "tailwindcss";
 
+/* Apple-ish design tokens + minimal component primitives */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+
+  --hh-bg: #f5f5f7;
+  --hh-surface: rgba(255, 255, 255, 0.78);
+  --hh-surface-solid: #ffffff;
+  --hh-border: rgba(0, 0, 0, 0.12);
+  --hh-text: rgba(0, 0, 0, 0.92);
+  --hh-muted: rgba(0, 0, 0, 0.58);
+  --hh-ring: rgba(10, 132, 255, 0.55);
+  --hh-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  --hh-radius-lg: 18px;
+  --hh-radius-md: 14px;
+  --hh-radius-sm: 12px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--hh-bg);
+  color: var(--hh-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text",
+    "SF Pro Display", Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(10, 132, 255, 0.25);
+}
+
+@layer components {
+  .hh-page {
+    @apply mx-auto w-full max-w-4xl px-5 py-8 sm:px-6;
+  }
+
+  .hh-topbar {
+    @apply flex items-center justify-between gap-4;
+  }
+
+  .hh-title {
+    @apply text-[22px] font-semibold tracking-[-0.02em];
+  }
+
+  .hh-subtitle {
+    @apply text-sm text-[color:var(--hh-muted)];
+  }
+
+  .hh-card {
+    @apply border;
+    border-color: var(--hh-border);
+    border-radius: var(--hh-radius-lg);
+    background: var(--hh-surface);
+    box-shadow: var(--hh-shadow);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+  }
+
+  .hh-card-inner {
+    @apply p-5 sm:p-6;
+  }
+
+  .hh-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition;
+  }
+
+  .hh-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition text-white;
+    background: #0a0a0a;
+  }
+
+  .hh-btn-primary:hover {
+    background: #000;
+  }
+
+  .hh-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition border bg-white/60;
+    border-color: var(--hh-border);
+  }
+
+  .hh-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  .hh-input,
+  .hh-select,
+  .hh-textarea {
+    @apply w-full rounded-xl border bg-white/70 px-3 py-2 text-sm outline-none transition;
+    border-color: var(--hh-border);
+  }
+
+  .hh-input:focus,
+  .hh-select:focus,
+  .hh-textarea:focus {
+    box-shadow: 0 0 0 4px var(--hh-ring);
+    border-color: rgba(10, 132, 255, 0.7);
+  }
+
+  .hh-link {
+    @apply text-sm font-medium underline underline-offset-4 decoration-black/30 hover:decoration-black/60;
+  }
+
+  .hh-chip {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs;
+    background: rgba(0, 0, 0, 0.06);
+    color: rgba(0, 0, 0, 0.78);
+  }
 }

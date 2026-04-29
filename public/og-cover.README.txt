@@ -1,0 +1,8 @@
+Place your social preview image at:
+public/og-cover.png
+
+Recommended size:
+1200x630
+
+This file is a placeholder note. Replace it by adding
+the actual image file named og-cover.png.
