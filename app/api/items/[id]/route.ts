@@ -86,7 +86,7 @@ export async function PATCH(
       minRole: "MEMBER",
     })
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const updated = await prisma.$transaction(async (tx: any) => {
       const result = await tx.item.updateMany({
         where: { id, householdId: input.householdId },
         data: {

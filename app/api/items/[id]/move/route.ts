@@ -26,7 +26,7 @@ export async function POST(
       minRole: "MEMBER",
     })
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const item = await tx.item.findFirst({
         where: { id, householdId: input.householdId },
         select: { id: true, spaceId: true },

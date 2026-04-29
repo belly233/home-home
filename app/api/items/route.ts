@@ -70,7 +70,7 @@ export async function GET(req: Request) {
       ok: true,
       items: items.map((i) => ({
         ...i,
-        tagNames: i.tags.map((t) => t.tag.name),
+        tagNames: i.tags.map((t: { tag: { name: string } }) => t.tag.name),
       })),
     })
   } catch (e) {
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
 
     const tagNames = Array.from(new Set(input.tagNames ?? [])).slice(0, 20)
 
-    const item = await prisma.$transaction(async (tx) => {
+    const item = await prisma.$transaction(async (tx: any) => {
       const space = await tx.space.findFirst({
         where: { id: input.spaceId, householdId: input.householdId },
         select: { id: true },
@@ -146,8 +146,10 @@ export async function POST(req: Request) {
           .filter((v, i, arr) => arr.indexOf(v) === i)
           .join("；")
 
-        const existingTagIdSet = new Set(existing.tags.map((t) => t.tagId))
-        const missingTagIds = tags.map((t) => t.id).filter((id) => !existingTagIdSet.has(id))
+        const existingTagIdSet = new Set(existing.tags.map((t: { tagId: string }) => t.tagId))
+        const missingTagIds = tags
+          .map((t: { id: string }) => t.id)
+          .filter((id: string) => !existingTagIdSet.has(id))
 
         await tx.item.update({
           where: { id: existing.id },
@@ -196,7 +198,7 @@ export async function POST(req: Request) {
           ownerMemberId: input.ownerMemberId,
           note: input.note,
           tags: tags.length
-            ? { create: tags.map((t) => ({ tagId: t.id })) }
+            ? { create: tags.map((t: { id: string }) => ({ tagId: t.id })) }
             : undefined,
           events: {
             create: {

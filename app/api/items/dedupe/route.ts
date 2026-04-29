@@ -102,7 +102,7 @@ export async function POST(req: Request) {
       const existingTagIdSet = new Set(keeper.tags.map((t) => t.tagId))
       const missingTagIds = Array.from(tagIdSet).filter((id) => !existingTagIdSet.has(id))
 
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         await tx.item.update({
           where: { id: keeper.id },
           data: {
