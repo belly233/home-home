@@ -54,7 +54,7 @@ export async function GET(
       ok: true,
       item: {
         ...item,
-        tagNames: item.tags.map((t) => t.tag.name),
+        tagNames: item.tags.map((t: { tag: { name: string } }) => t.tag.name),
       },
     })
   } catch (e) {
