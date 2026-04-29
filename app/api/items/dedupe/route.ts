@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import { z } from "zod"
 
 import { requireUserId } from "@/app/lib/auth"
@@ -79,8 +78,12 @@ export async function POST(req: Request) {
       const duplicateIds = duplicates.map((d) => d.id)
 
       const mergedQuantity = group
-        .map((i) => i.quantity)
-        .reduce((acc, v) => acc.plus(v), new Prisma.Decimal(0))
+        .map((i) =>
+          typeof (i.quantity as any)?.toNumber === "function"
+            ? (i.quantity as any).toNumber()
+            : Number(i.quantity),
+        )
+        .reduce((acc, v) => acc + v, 0)
 
       const mergedNote = Array.from(
         new Set(

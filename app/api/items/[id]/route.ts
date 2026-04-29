@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import { z } from "zod"
 
 import { requireUserId } from "@/app/lib/auth"
@@ -94,7 +93,7 @@ export async function PATCH(
           category: input.category ?? undefined,
           quantity:
             typeof input.quantity === "number"
-              ? new Prisma.Decimal(input.quantity)
+              ? input.quantity
               : undefined,
           unit: input.unit ?? undefined,
           status: input.status,

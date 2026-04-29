@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import { z } from "zod"
 
 import { requireUserId } from "@/app/lib/auth"
@@ -138,8 +137,12 @@ export async function POST(req: Request) {
       })
 
       if (existing) {
-        const addQty = new Prisma.Decimal(input.quantity ?? 1)
-        const mergedQty = existing.quantity.plus(addQty)
+        const addQty = input.quantity ?? 1
+        const existingQty =
+          typeof (existing.quantity as any)?.toNumber === "function"
+            ? (existing.quantity as any).toNumber()
+            : Number(existing.quantity)
+        const mergedQty = existingQty + addQty
         const mergedNote = [existing.note, input.note]
           .map((v) => (typeof v === "string" ? v.trim() : ""))
           .filter(Boolean)
@@ -192,7 +195,7 @@ export async function POST(req: Request) {
           name: input.name,
           imageDataUrl: input.imageDataUrl,
           category: input.category,
-          quantity: new Prisma.Decimal(input.quantity ?? 1),
+          quantity: input.quantity ?? 1,
           unit: input.unit,
           status: input.status ?? "IN_USE",
           ownerMemberId: input.ownerMemberId,
