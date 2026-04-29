@@ -54,11 +54,11 @@ export async function POST(req: Request) {
 
     const duplicateGroups = Array.from(groupsMap.values())
       .filter((g) => g.length > 1)
-      .map((g) => ({
+      .map((g: Array<(typeof items)[number]>) => ({
         spaceId: g[0].spaceId,
         normalizedName: normalizeName(g[0].name),
-        itemIds: g.map((i) => i.id),
-        itemNames: g.map((i) => i.name),
+        itemIds: g.map((i: (typeof items)[number]) => i.id),
+        itemNames: g.map((i: (typeof items)[number]) => i.name),
       }))
 
     if (dryRun) {
