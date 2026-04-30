@@ -17,6 +17,7 @@ export function SignInClient() {
   const [providers, setProviders] = useState<ProvidersResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [rawText, setRawText] = useState<string | null>(null)
+  const [csrfToken, setCsrfToken] = useState<string>("")
 
   useEffect(() => {
     let cancelled = false
@@ -37,10 +38,32 @@ export function SignInClient() {
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/auth/csrf", { cache: "no-store" })
+        if (!res.ok) return
+        const json = (await res.json()) as { csrfToken?: string }
+        if (!cancelled) setCsrfToken(json.csrfToken ?? "")
+      } catch {
+        // ignore
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const providerList = useMemo(() => {
     if (!providers) return []
     return Object.values(providers).filter((p) => p.type !== "email")
   }, [providers])
+
+  const hasCredentials = useMemo(
+    () => Boolean(providers && Object.values(providers).some((p) => p.type === "credentials")),
+    [providers],
+  )
 
   if (error) {
     return <div className="text-sm text-red-600">Error: {error}</div>
@@ -64,12 +87,38 @@ export function SignInClient() {
   }
 
   return (
-    <div className="flex flex-wrap gap-3">
-      {providerList.map((p) => (
-        <a key={p.id} className="hh-btn-secondary" href={buildSignInHref(p.id)}>
-          Continue with {p.name}
-        </a>
-      ))}
+    <div className="grid gap-3">
+      <div className="flex flex-wrap gap-3">
+        {providerList
+          .filter((p) => p.type !== "credentials")
+          .map((p) => (
+            <a key={p.id} className="hh-btn-secondary" href={buildSignInHref(p.id)}>
+              Continue with {p.name}
+            </a>
+          ))}
+      </div>
+
+      {hasCredentials ? (
+        <form
+          className="grid gap-2 rounded-2xl border border-black/10 bg-white/60 p-3 text-sm"
+          method="POST"
+          action="/api/auth/callback/credentials"
+        >
+          <div className="font-medium">Dev credentials</div>
+          <input type="hidden" name="csrfToken" value={csrfToken} />
+          <input type="hidden" name="callbackUrl" value="/" />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input className="hh-input" name="email" type="email" placeholder="Email" required />
+            <input className="hh-input" name="name" type="text" placeholder="Name (optional)" />
+          </div>
+          <button className="hh-btn-primary w-fit" type="submit" disabled={!csrfToken}>
+            Sign in
+          </button>
+          {!csrfToken ? (
+            <div className="text-xs text-[color:var(--hh-muted)]">Loading CSRF token…</div>
+          ) : null}
+        </form>
+      ) : null}
     </div>
   )
 }

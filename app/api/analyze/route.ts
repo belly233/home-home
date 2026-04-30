@@ -493,6 +493,7 @@ async function requestVolcJson(params: {
   maxOutputTokens: number
 }) {
   const { client, model, input, maxOutputTokens } = params
+  const timeoutMs = process.env.NODE_ENV !== "production" ? 25_000 : 9_000
   return Promise.race([
     client.responses.create({
       model,
@@ -500,8 +501,7 @@ async function requestVolcJson(params: {
       text: { format: { type: "json_object" } } as never,
       max_output_tokens: maxOutputTokens,
     }),
-    // Vercel Hobby functions are often capped ~10s; keep this under that.
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("VOLCE_TIMEOUT")), 9_000)),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("VOLCE_TIMEOUT")), timeoutMs)),
   ])
 }
 
@@ -737,39 +737,18 @@ export async function POST(req: Request) {
       totalLatencyMs: Date.now() - startedAt,
     })
     if (/timeout|timed out|aborted|VOLCE_TIMEOUT/i.test(message)) {
-      const fallbackSuggestions = [
+      return Response.json(
         {
-          title: "Do a quick first-pass declutter",
-          why: "Removing obvious out-of-place items first gives immediate progress and reduces visual noise.",
-          steps: [
-            "Collect all out-of-place items into one temporary basket",
-            "Group similar items together",
-            "Return each group to one fixed zone",
-          ],
-          priority: "P1" as const,
+          ok: false,
+          error: "VOLCE_TIMEOUT",
+          details: {
+            latencyMs: Date.now() - startedAt,
+            householdId: reqHouseholdId,
+            spaceHint: reqSpaceHint,
+          },
         },
-      ]
-      const fallbackAfter = buildFallbackAfterPreview({
-        hint: null,
-        items: [],
-        suggestions: fallbackSuggestions,
-      })
-      return Response.json({
-        ok: true,
-        householdId: reqHouseholdId,
-        spaceHint: reqSpaceHint,
-        items: buildFallbackItems(reqSpaceHint),
-        suggestions: fallbackSuggestions,
-        afterPreview: fallbackAfter,
-        warnings: [
-          "AI recognition timed out. Returned fallback item candidates and organization plan.",
-          `DEBUG:VOLCE_TIMEOUT latencyMs=${Date.now() - startedAt}`,
-        ],
-        debug: {
-          latencyMs: Date.now() - startedAt,
-          fallback: "VOLCE_TIMEOUT",
-        },
-      })
+        { status: 504 },
+      )
     }
     if (/401/.test(message)) return Response.json({ ok: false, error: "VOLCE_AUTH_ERROR" }, { status: 502 })
     if (/403/.test(message)) return Response.json({ ok: false, error: "VOLCE_PERMISSION_DENIED" }, { status: 502 })
