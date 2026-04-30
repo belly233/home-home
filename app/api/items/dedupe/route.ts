@@ -43,6 +43,7 @@ export async function POST(req: Request) {
         tags: { select: { tagId: true } },
       },
     })
+    type Item = (typeof items)[number]
 
     const groupsMap = new Map<string, typeof items>()
     for (const item of items) {
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
     for (const group of Array.from(groupsMap.values()).filter((g) => g.length > 1)) {
       const keeper = group[0]
       const duplicates = group.slice(1)
-      const duplicateIds = duplicates.map((d) => d.id)
+      const duplicateIds = duplicates.map((d: Item) => d.id)
 
       const mergedQuantity = group
         .map((i) =>
