@@ -1,14 +1,11 @@
 import OpenAI from "openai"
 import { z } from "zod"
 
-import { requireUserId } from "@/app/lib/auth"
-import { requireMember } from "@/app/lib/household"
-
 export const runtime = "nodejs"
 export const maxDuration = 120
 
 const inputSchema = z.object({
-  householdId: z.string().min(1),
+  householdId: z.string().trim().optional(),
   prompt: z.string().trim().min(12).max(4000),
   size: z.enum(["1024x1024", "1024x1536", "1536x1024", "2K"]).optional(),
 })
@@ -46,15 +43,8 @@ function getImageModelCandidates() {
 
 export async function POST(req: Request) {
   try {
-    const userId = await requireUserId()
     const body = await req.json()
     const input = inputSchema.parse(body)
-
-    await requireMember({
-      userId,
-      householdId: input.householdId,
-      minRole: "VIEWER",
-    })
 
     const apiKey = process.env.VOLCE_API_KEY || process.env.ARK_API_KEY
     if (!apiKey) {
@@ -111,8 +101,6 @@ export async function POST(req: Request) {
     )
   } catch (e) {
     const message = e instanceof Error ? e.message : "UNKNOWN"
-    if (message === "UNAUTHENTICATED") return Response.json({ ok: false, error: message }, { status: 401 })
-    if (message === "FORBIDDEN") return Response.json({ ok: false, error: message }, { status: 403 })
     if (/401/.test(message)) return Response.json({ ok: false, error: "VOLCE_AUTH_ERROR" }, { status: 502 })
     if (/403/.test(message)) return Response.json({ ok: false, error: "VOLCE_PERMISSION_DENIED" }, { status: 502 })
     if (/404/.test(message)) return Response.json({ ok: false, error: "VOLCE_IMAGE_MODEL_NOT_FOUND" }, { status: 502 })

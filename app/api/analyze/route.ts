@@ -642,11 +642,11 @@ export async function POST(req: Request) {
           {
             type: "input_text",
             text:
-              "Output JSON object only. Allowed top-level field: items. " +
+              "Output JSON object only with keys: items, suggestions, afterPreview, warnings. " +
               "No markdown, no code blocks, no explanations. " +
               "All returned text must be English. " +
               "Each item may include suggestedSpaceName, suggestedSubspaceName, suggestedSpaceReason. " +
-              "Return 5-12 concrete visible items from the photo.",
+              "Return 8-15 concrete visible items from the photo. Avoid generic placeholders.",
           },
           { type: "input_image", image_url: imageDataUrl, detail: "low" },
         ],
@@ -655,7 +655,7 @@ export async function POST(req: Request) {
 
     const firstPass = await parseModelJsonWithRetries({
       request: (maxOutputTokens) => requestVolcJson({ client, model, input, maxOutputTokens }),
-      tokenPlan: [700, 1200],
+      tokenPlan: [500, 900],
     })
     let response = firstPass.response
     let normalized = firstPass.normalized
@@ -724,12 +724,7 @@ export async function POST(req: Request) {
       coerced.items = buildFallbackItems(parsedInput.data.spaceHint ?? null)
       coerced.warnings = [...coerced.warnings, "No items detected from image. Returned fallback item candidates."]
     }
-    const parsedOutputRaw = outputSchema.parse(coerced)
-    const parsedOutput = await translateResultToEnglish({
-      client,
-      model,
-      data: parsedOutputRaw,
-    })
+    const parsedOutput = outputSchema.parse(coerced)
     if (!Array.isArray(parsedJson.items) || !Array.isArray(parsedJson.suggestions)) {
       console.warn("[analyze] model json missing required arrays, fallback to empty arrays", {
         hasItems: Array.isArray(parsedJson.items),

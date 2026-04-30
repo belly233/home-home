@@ -1,5 +1,7 @@
 import Link from "next/link"
 
+import { SignInClient } from "./SignInClient"
+
 const devCredentialsEnabled =
   process.env.AUTH_DEV_CREDENTIALS?.toLowerCase() === "true"
 
@@ -27,9 +29,9 @@ export default function SignInPage() {
               <Link className="hh-btn-primary" href="/scan">
                 Start scanning
               </Link>
-              <Link className="hh-btn-secondary" href="/api/auth/signin">
-                Continue to NextAuth sign-in
-              </Link>
+            </div>
+            <div className="pt-1">
+              <SignInClient />
             </div>
           </div>
         </section>
@@ -39,7 +41,8 @@ export default function SignInPage() {
             <div className="hh-card-inner space-y-2 text-sm">
               <div className="font-medium">Why the sign-in page can look empty</div>
               <div className="text-[color:var(--hh-muted)]">
-                No authentication providers are enabled. To enable the built-in dev credentials provider, set{" "}
+                If you haven’t configured Google/Apple yet, you won’t see any provider buttons. For a quick
+                dev-only login, enable the built-in credentials provider by setting{" "}
                 <code className="rounded bg-black/5 px-1 py-0.5">AUTH_DEV_CREDENTIALS=true</code> in your
                 environment variables.
               </div>

@@ -357,7 +357,7 @@ export function ScanClient() {
   }
 
   async function generateAfterImage() {
-    if (!result || !householdId) return
+    if (!result) return
     setGeneratingAfter(true)
     setAfterError(null)
     try {
@@ -365,7 +365,7 @@ export function ScanClient() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          householdId,
+          householdId: householdId || "",
           prompt: result.afterPreview.prompt,
         }),
       })
