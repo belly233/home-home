@@ -493,7 +493,9 @@ async function requestVolcJson(params: {
   maxOutputTokens: number
 }) {
   const { client, model, input, maxOutputTokens } = params
-  const timeoutMs = process.env.NODE_ENV !== "production" ? 25_000 : 9_000
+  // Dev: allow longer runs + retries to avoid "length" truncation while iterating.
+  // Prod: keep short to fit typical serverless budgets.
+  const timeoutMs = process.env.NODE_ENV !== "production" ? 45_000 : 9_000
   return Promise.race([
     client.responses.create({
       model,
@@ -659,10 +661,15 @@ export async function POST(req: Request) {
       },
     ] as never
 
+    const tokenPlan =
+      process.env.NODE_ENV !== "production"
+        ? [700, 1200, 2000]
+        : // Keep one quick attempt to stay under serverless timeout.
+          [320]
+
     const firstPass = await parseModelJsonWithRetries({
       request: (maxOutputTokens) => requestVolcJson({ client, model, input, maxOutputTokens }),
-      // Keep one quick attempt to stay under serverless timeout.
-      tokenPlan: [320],
+      tokenPlan,
     })
     let response = firstPass.response
     let normalized = firstPass.normalized
