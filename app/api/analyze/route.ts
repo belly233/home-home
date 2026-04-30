@@ -495,7 +495,7 @@ async function requestVolcJson(params: {
   const { client, model, input, maxOutputTokens } = params
   // Dev: allow longer runs + retries to avoid "length" truncation while iterating.
   // Prod: keep short to fit typical serverless budgets.
-  const timeoutMs = process.env.NODE_ENV !== "production" ? 45_000 : 9_000
+  const timeoutMs = process.env.NODE_ENV !== "production" ? 90_000 : 9_000
   return Promise.race([
     client.responses.create({
       model,

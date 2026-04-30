@@ -173,7 +173,7 @@ async function getAiHealthHint() {
 }
 
 async function compressImage(file: File) {
-  // Keep it simple: downscale longest side to 1024px, JPEG quality 0.78.
+  // Keep it simple: downscale longest side to 768px, JPEG quality 0.76.
   // If anything fails, fall back to original file.
   try {
     if (!file.type.startsWith("image/")) return file
@@ -185,7 +185,7 @@ async function compressImage(file: File) {
       img.src = srcUrl
       await img.decode()
 
-      const maxSide = 1024
+      const maxSide = 768
       const w = img.naturalWidth || img.width
       const h = img.naturalHeight || img.height
       if (!w || !h) return file
@@ -203,7 +203,7 @@ async function compressImage(file: File) {
       ctx.drawImage(img, 0, 0, cw, ch)
 
       const blob: Blob | null = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.78),
+        canvas.toBlob(resolve, "image/jpeg", 0.76),
       )
       if (!blob) return file
 
