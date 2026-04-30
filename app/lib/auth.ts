@@ -1,6 +1,8 @@
 import type { NextAuthOptions } from "next-auth"
 import { getServerSession } from "next-auth/next"
 import CredentialsProvider from "next-auth/providers/credentials"
+import AppleProvider from "next-auth/providers/apple"
+import GoogleProvider from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { z } from "zod"
 
@@ -9,11 +11,30 @@ import { prisma } from "./prisma"
 const devCredentialsEnabled =
   process.env.AUTH_DEV_CREDENTIALS?.toLowerCase() === "true"
 
+const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+const appleEnabled = Boolean(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET)
+
 export const authOptions: NextAuthOptions = {
   pages: { signIn: "/signin" },
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [
+    ...(googleEnabled
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
+    ...(appleEnabled
+      ? [
+          AppleProvider({
+            clientId: process.env.APPLE_CLIENT_ID!,
+            clientSecret: process.env.APPLE_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
     ...(devCredentialsEnabled
       ? [
           CredentialsProvider({
