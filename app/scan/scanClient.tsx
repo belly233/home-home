@@ -151,6 +151,13 @@ function mapAiError(code: string) {
   if (code === "VOLCE_PERMISSION_DENIED") {
     return "Recognition failed: current API key has no permission for this model."
   }
+  if (code === "NO_ITEMS_DETECTED") {
+    return (
+      "No items detected from the image. This usually means the model does not support vision input or " +
+      "the configured model is incorrect. Set VOLCE_VISION_MODEL to a vision-capable model (e.g. " +
+      "doubao-seed-1-6-vision-250815) and retry."
+    )
+  }
   return null
 }
 

@@ -621,7 +621,12 @@ export async function POST(req: Request) {
     }
 
     const baseUrl = (process.env.VOLCE_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3").replace(/\/$/, "")
-    const model = process.env.VOLCE_MODEL || "doubao-seed-2-0-pro-260215"
+    // IMPORTANT: image understanding requires a vision-capable model.
+    // Prefer VOLCE_VISION_MODEL, then VOLCE_MODEL, then a known vision default.
+    const model =
+      process.env.VOLCE_VISION_MODEL ||
+      process.env.VOLCE_MODEL ||
+      "doubao-seed-1-6-vision-250815"
     const client = new OpenAI({ apiKey, baseURL: baseUrl })
     const imageDataUrl = await fileToDataUrl(file)
     const hint = parsedInput.data.spaceHint?.trim() || "No space hint provided"
@@ -680,8 +685,19 @@ export async function POST(req: Request) {
       })
     }
     if (!coerced.items.length) {
-      coerced.items = buildFallbackItems(parsedInput.data.spaceHint ?? null)
-      coerced.warnings = [...coerced.warnings, "No items detected from image. Returned fallback item candidates."]
+      // Don't silently return templated items; this hides real issues (wrong model, bad vision support, etc).
+      return Response.json(
+        {
+          ok: false,
+          error: "NO_ITEMS_DETECTED",
+          details: {
+            model,
+            latencyMs: Date.now() - startedAt,
+            preview: normalized.slice(0, 500),
+          },
+        },
+        { status: 502 },
+      )
     }
     const parsedOutput = outputSchema.parse(coerced)
     if (!Array.isArray(parsedJson.items) || !Array.isArray(parsedJson.suggestions)) {
@@ -711,6 +727,7 @@ export async function POST(req: Request) {
       warnings: parsedOutput.warnings ?? [],
       debug: {
         latencyMs: Date.now() - startedAt,
+        model,
       },
     })
   } catch (e) {

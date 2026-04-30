@@ -9,13 +9,16 @@ import { z } from "zod"
 import { prisma } from "./prisma"
 
 const devCredentialsEnabled =
-  process.env.AUTH_DEV_CREDENTIALS?.toLowerCase() === "true"
+  process.env.AUTH_DEV_CREDENTIALS?.toLowerCase() === "true" ||
+  process.env.NODE_ENV !== "production"
 
 const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 const appleEnabled = Boolean(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET)
 
 export const authOptions: NextAuthOptions = {
   pages: { signIn: "/signin" },
+  // Make local dev login work even if NEXTAUTH_SECRET isn't set.
+  secret: process.env.NEXTAUTH_SECRET ?? (process.env.NODE_ENV !== "production" ? "dev-secret" : undefined),
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [
