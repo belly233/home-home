@@ -1,14 +1,11 @@
 import OpenAI from "openai"
 import { z } from "zod"
 
-import { requireUserId } from "@/app/lib/auth"
-import { requireMember } from "@/app/lib/household"
-
 export const runtime = "nodejs"
 export const maxDuration = 180
 
 const inputSchema = z.object({
-  householdId: z.string().min(1),
+  householdId: z.string().trim().optional(),
   spaceHint: z.string().trim().max(80).optional(),
 })
 
@@ -596,28 +593,25 @@ export async function POST(req: Request) {
   let reqHouseholdId = ""
   let reqSpaceHint: string | null = null
   try {
-    const userId = await requireUserId()
     const formData = await req.formData()
     const householdId = formData.get("householdId")
     const spaceHint = formData.get("spaceHint")
     const file = formData.get("file")
 
     const parsedInput = inputSchema.safeParse({
-      householdId: typeof householdId === "string" ? householdId : "",
+      householdId: typeof householdId === "string" ? householdId : undefined,
       spaceHint: typeof spaceHint === "string" ? spaceHint : undefined,
     })
     if (!parsedInput.success) {
       console.warn("[analyze] bad request", { issues: parsedInput.error.issues.length })
       return Response.json({ ok: false, error: "BAD_REQUEST" }, { status: 400 })
     }
-    reqHouseholdId = parsedInput.data.householdId
+    reqHouseholdId = parsedInput.data.householdId ?? ""
     reqSpaceHint = parsedInput.data.spaceHint ?? null
     if (!(file instanceof File)) {
       console.warn("[analyze] missing file")
       return Response.json({ ok: false, error: "MISSING_FILE" }, { status: 400 })
     }
-
-    await requireMember({ userId, householdId: parsedInput.data.householdId, minRole: "MEMBER" })
 
     const apiKey = process.env.VOLCE_API_KEY || process.env.ARK_API_KEY
     if (!apiKey) {
@@ -631,7 +625,7 @@ export async function POST(req: Request) {
     const imageDataUrl = await fileToDataUrl(file)
     const hint = parsedInput.data.spaceHint?.trim() || "No space hint provided"
     console.info("[analyze] request start", {
-      householdId: parsedInput.data.householdId,
+      householdId: parsedInput.data.householdId ?? null,
       hasSpaceHint: Boolean(parsedInput.data.spaceHint?.trim()),
       fileName: file.name,
       fileType: file.type || "unknown",
@@ -755,7 +749,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       ok: true,
-      householdId: parsedInput.data.householdId,
+      householdId: parsedInput.data.householdId ?? "",
       spaceHint: parsedInput.data.spaceHint ?? null,
       items: parsedOutput.items ?? [],
       suggestions: parsedOutput.suggestions ?? [],

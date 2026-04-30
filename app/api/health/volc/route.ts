@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server"
 import OpenAI from "openai"
 
-import { requireUserId } from "@/app/lib/auth"
-
 export const runtime = "nodejs"
 export const maxDuration = 30
 
@@ -23,8 +21,6 @@ function getErrorCodeByStatus(status: number) {
 
 export async function GET() {
   try {
-    await requireUserId()
-
     const apiKey = process.env.VOLCE_API_KEY || process.env.ARK_API_KEY
     if (!apiKey) {
       return NextResponse.json(

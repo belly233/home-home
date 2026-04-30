@@ -40,7 +40,7 @@ export default async function Page() {
         "HD after previews",
       ],
       cta: "Start Plus",
-      href: "/api/auth/signin",
+      href: "/signin",
     },
     {
       name: "Family",
@@ -50,7 +50,7 @@ export default async function Page() {
         "Shared checklists and progress tracking",
       ],
       cta: "Contact Sales",
-      href: "/api/auth/signin",
+      href: "/signin",
     },
   ]
   const faqs = [
@@ -115,7 +115,7 @@ export default async function Page() {
               <a className="hh-link" href="#faq">
                 FAQ
               </a>
-              <Link className="hh-link" href="/api/auth/signin">
+              <Link className="hh-link" href="/signin">
                 Sign in
               </Link>
             </nav>
@@ -144,7 +144,7 @@ export default async function Page() {
                 <Link className="hh-btn-primary" href="/scan">
                   Start with a Photo
                 </Link>
-                <Link className="hh-btn-secondary" href="/api/auth/signin">
+                <Link className="hh-btn-secondary" href="/signin">
                   See Demo
                 </Link>
               </div>
@@ -263,7 +263,7 @@ export default async function Page() {
                 <Link className="hh-btn-primary" href="/scan">
                   Start Free Analysis
                 </Link>
-                <Link className="hh-btn-secondary" href="/api/auth/signin">
+                <Link className="hh-btn-secondary" href="/signin">
                   Create My Account
                 </Link>
               </div>

@@ -10,6 +10,7 @@ const devCredentialsEnabled =
   process.env.AUTH_DEV_CREDENTIALS?.toLowerCase() === "true"
 
 export const authOptions: NextAuthOptions = {
+  pages: { signIn: "/signin" },
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [

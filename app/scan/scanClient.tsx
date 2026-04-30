@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
 
 type AnalyzeResult = {
   ok: true
@@ -223,7 +223,8 @@ async function fileToDataUrl(file: File) {
 
 export function ScanClient() {
   const sp = useSearchParams()
-  const householdId = sp.get("householdId") ?? ""
+  const router = useRouter()
+  const [householdId, setHouseholdId] = useState<string>(sp.get("householdId") ?? "")
 
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -247,7 +248,7 @@ export function ScanClient() {
   const [generatingAfter, setGeneratingAfter] = useState(false)
   const [afterError, setAfterError] = useState<string | null>(null)
 
-  const canSubmit = useMemo(() => !!householdId && !!file && !loading, [householdId, file, loading])
+  const canSubmit = useMemo(() => !!file && !loading, [file, loading])
   const selectedItemsCount = useMemo(
     () => Object.values(itemSelectedByKey).filter(Boolean).length,
     [itemSelectedByKey],
@@ -263,7 +264,7 @@ export function ScanClient() {
   }
 
   async function analyze() {
-    if (!file || !householdId) return
+    if (!file) return
     setLoading(true)
     setError(null)
     setSaveError(null)
@@ -273,7 +274,7 @@ export function ScanClient() {
       const preparedDataUrl = await fileToDataUrl(prepared)
       setCapturedImageDataUrl(preparedDataUrl)
       const fd = new FormData()
-      fd.set("householdId", householdId)
+      if (householdId) fd.set("householdId", householdId)
       if (spaceHint.trim()) fd.set("spaceHint", spaceHint.trim())
       fd.set("file", prepared)
 
@@ -296,14 +297,19 @@ export function ScanClient() {
       for (let i = 0; i < json.items.length; i++) {
         const it = json.items[i]
         const key = `${it.name}-${i}`
-        const inferred = inferAreaForItem({
-          spaces,
-          suggestedSpaceName: it.suggestedSpaceName,
-          suggestedSubspaceName: it.suggestedSubspaceName,
-          hint: json.spaceHint ?? undefined,
-        })
-        nextSpaceByKey[key] = inferred.rootSpaceId
-        nextSubspaceByKey[key] = inferred.subspaceName
+        if (spaces.length) {
+          const inferred = inferAreaForItem({
+            spaces,
+            suggestedSpaceName: it.suggestedSpaceName,
+            suggestedSubspaceName: it.suggestedSubspaceName,
+            hint: json.spaceHint ?? undefined,
+          })
+          nextSpaceByKey[key] = inferred.rootSpaceId
+          nextSubspaceByKey[key] = inferred.subspaceName
+        } else {
+          nextSpaceByKey[key] = ""
+          nextSubspaceByKey[key] = (it.suggestedSubspaceName ?? "").trim()
+        }
         nextSelectedByKey[key] = true
         nextSaveStateByKey[key] = "idle"
       }
@@ -378,11 +384,52 @@ export function ScanClient() {
     setItemSelectedByKey((prev) => ({ ...prev, [key]: selected }))
   }
 
+  async function ensureHousehold() {
+    if (householdId) return householdId
+    const preferredName =
+      (result?.spaceHint ?? spaceHint).trim() ? `Home — ${(result?.spaceHint ?? spaceHint).trim()}` : "My Home"
+    const res = await fetch("/api/households", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: preferredName }),
+    })
+    if (res.status === 401) {
+      throw new Error("PLEASE_SIGN_IN")
+    }
+    const json = (await res.json()) as { ok?: boolean; error?: string; household?: { id: string } }
+    if (!res.ok || !json.ok || !json.household?.id) {
+      throw new Error(json.error ?? "CREATE_HOUSEHOLD_FAILED")
+    }
+    const createdId = json.household.id
+    setHouseholdId(createdId)
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set("householdId", createdId)
+      router.replace(url.pathname + "?" + url.searchParams.toString())
+    } catch {
+      // ignore
+    }
+
+    const defaultSpaceName = (result?.spaceHint ?? spaceHint).trim() || "Default Space"
+    const spaceRes = await fetch("/api/spaces", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ householdId: createdId, name: defaultSpaceName, parentId: null }),
+    })
+    const spaceJson = (await spaceRes.json()) as { ok?: boolean; error?: string }
+    if (!spaceRes.ok || !spaceJson.ok) {
+      console.warn("[scan] default space create failed", spaceJson)
+    }
+    await loadSpaces()
+    return createdId
+  }
+
   async function saveOneItem(
     key: string,
     item: AnalyzeResult["items"][number],
     overrideSpaceId?: string,
   ) {
+    const resolvedHouseholdId = await ensureHousehold()
     const spaceId = (overrideSpaceId ?? itemSpaceByKey[key] ?? "").trim()
     if (!spaceId) {
       throw new Error(`Please select a space for ${item.name} first`)
@@ -391,7 +438,7 @@ export function ScanClient() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        householdId,
+        householdId: resolvedHouseholdId,
         spaceId,
         name: item.name,
         imageDataUrl: capturedImageDataUrl ?? undefined,
@@ -408,6 +455,7 @@ export function ScanClient() {
   }
 
   async function createSpaceByName(name: string, parentId?: string | null) {
+    const resolvedHouseholdId = await ensureHousehold()
     const trimmed = name.trim()
     if (!trimmed) throw new Error("Space name is empty, cannot auto-create")
     const existing = spaces.find(
@@ -418,7 +466,7 @@ export function ScanClient() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        householdId,
+        householdId: resolvedHouseholdId,
         name: trimmed,
         parentId: parentId ?? null,
       }),
@@ -487,7 +535,12 @@ export function ScanClient() {
         setSaveStateByKey((prev) => ({ ...prev, [key]: "saved" }))
       }
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "UNKNOWN")
+      const message = e instanceof Error ? e.message : "UNKNOWN"
+      if (message === "PLEASE_SIGN_IN") {
+        setSaveError("Please sign in first to create a household and save items.")
+      } else {
+        setSaveError(message)
+      }
     } finally {
       setSavingAll(false)
     }
@@ -512,6 +565,10 @@ export function ScanClient() {
   }, [itemSpaceByKey, result, spaces])
 
   useEffect(() => {
+    setHouseholdId(sp.get("householdId") ?? "")
+  }, [sp])
+
+  useEffect(() => {
     if (!householdId) return
     loadSpaces().catch((e) => {
       setError(e instanceof Error ? e.message : "LOAD_SPACES_FAILED")
@@ -534,13 +591,16 @@ export function ScanClient() {
       </div>
 
       {!householdId ? (
-        <div className="mt-6 hh-card">
-          <div className="hh-card-inner text-sm">
-            Missing `householdId`. Select a household from Home first.
-          </div>
+        <div className="mt-4 rounded-2xl border border-black/10 bg-white/60 px-4 py-3 text-sm text-[color:var(--hh-muted)]">
+          You can analyze photos without selecting a household. To save results to inventory, sign in and we’ll
+          create a household after analysis.{" "}
+          <Link className="hh-link" href="/signin">
+            Sign in
+          </Link>
         </div>
-      ) : (
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+      ) : null}
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
           <section className="hh-card">
             <div className="hh-card-inner">
               <div className="font-medium">Upload Photo</div>
@@ -727,9 +787,15 @@ export function ScanClient() {
                           ? "Saving..."
                           : `Confirm and save selected items (${selectedItemsCount})`}
                       </button>
-                      <Link className="hh-link" href={`/items?householdId=${householdId}`}>
-                        Go to Items
-                      </Link>
+                      {householdId ? (
+                        <Link className="hh-link" href={`/items?householdId=${householdId}`}>
+                          Go to Items
+                        </Link>
+                      ) : (
+                        <Link className="hh-link text-xs" href="/signin">
+                          Sign in to save
+                        </Link>
+                      )}
                     </div>
                     <label className="mt-2 flex items-center gap-2 text-xs text-[color:var(--hh-muted)]">
                       <input
@@ -822,8 +888,7 @@ export function ScanClient() {
               )}
             </div>
           </section>
-        </div>
-      )}
+      </div>
     </main>
   )
 }
