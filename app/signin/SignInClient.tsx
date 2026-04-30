@@ -16,6 +16,7 @@ function buildSignInHref(providerId: string) {
 export function SignInClient() {
   const [providers, setProviders] = useState<ProvidersResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [rawText, setRawText] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -23,7 +24,9 @@ export function SignInClient() {
       try {
         const res = await fetch("/api/auth/providers", { cache: "no-store" })
         if (!res.ok) throw new Error("LOAD_PROVIDERS_FAILED")
-        const json = (await res.json()) as ProvidersResponse
+        const text = await res.text()
+        if (!cancelled) setRawText(text)
+        const json = JSON.parse(text) as ProvidersResponse
         if (!cancelled) setProviders(json)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "LOAD_PROVIDERS_FAILED")
@@ -50,7 +53,12 @@ export function SignInClient() {
   if (!providerList.length) {
     return (
       <div className="text-sm text-[color:var(--hh-muted)]">
-        No authentication providers are enabled yet.
+        No authentication providers are enabled yet. Configure Google/Apple env vars on Vercel, then redeploy.
+        {rawText ? (
+          <pre className="mt-2 max-h-48 overflow-auto rounded-xl border border-black/10 bg-white/70 p-3 text-xs">
+            {rawText}
+          </pre>
+        ) : null}
       </div>
     )
   }

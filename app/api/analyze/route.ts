@@ -500,7 +500,8 @@ async function requestVolcJson(params: {
       text: { format: { type: "json_object" } } as never,
       max_output_tokens: maxOutputTokens,
     }),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("VOLCE_TIMEOUT")), 25_000)),
+    // Vercel Hobby functions are often capped ~10s; keep this under that.
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("VOLCE_TIMEOUT")), 9_000)),
   ])
 }
 
@@ -646,7 +647,7 @@ export async function POST(req: Request) {
               "No markdown, no code blocks, no explanations. " +
               "All returned text must be English. " +
               "Each item may include suggestedSpaceName, suggestedSubspaceName, suggestedSpaceReason. " +
-              "Return 8-15 concrete visible items from the photo. Avoid generic placeholders.",
+              "Return 6-12 concrete visible items from the photo. Avoid generic placeholders.",
           },
           { type: "input_image", image_url: imageDataUrl, detail: "low" },
         ],
@@ -655,7 +656,8 @@ export async function POST(req: Request) {
 
     const firstPass = await parseModelJsonWithRetries({
       request: (maxOutputTokens) => requestVolcJson({ client, model, input, maxOutputTokens }),
-      tokenPlan: [500, 900],
+      // Keep one quick attempt to stay under serverless timeout.
+      tokenPlan: [320],
     })
     let response = firstPass.response
     let normalized = firstPass.normalized
@@ -670,49 +672,6 @@ export async function POST(req: Request) {
     })
 
     let coerced = coerceModelOutput(parsedJson)
-    if (!coerced.items.length) {
-      console.warn("[analyze] items empty, run fallback item-only extraction")
-      const fallbackInput = [
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: `Space hint: ${hint}` },
-            {
-              type: "input_text",
-              text:
-                "Output JSON only: {items:[{name,suggestedSpaceName,suggestedSubspaceName,suggestedSpaceReason}]}. " +
-                "No suggestions, no warnings, no explanations, no markdown. " +
-                "All text must be English. " +
-                "Keep only core visible items, around 6-12 entries.",
-            },
-            { type: "input_image", image_url: imageDataUrl, detail: "low" },
-          ],
-        },
-      ] as never
-      const fallbackPass = await parseModelJsonWithRetries({
-        request: (maxOutputTokens) =>
-          requestVolcJson({
-            client,
-            model,
-            input: fallbackInput,
-            maxOutputTokens,
-          }),
-        tokenPlan: [800, 1200],
-      })
-      response = fallbackPass.response
-      normalized = fallbackPass.normalized
-      const fallbackJson = fallbackPass.parsedJson
-      const fallbackCoerced = coerceModelOutput(fallbackJson)
-      if (fallbackCoerced.items.length) {
-        coerced = {
-          items: fallbackCoerced.items,
-          suggestions: coerced.suggestions.length ? coerced.suggestions : fallbackCoerced.suggestions,
-          shopping: coerced.shopping.length ? coerced.shopping : fallbackCoerced.shopping,
-          afterPreview: coerced.afterPreview.prompt ? coerced.afterPreview : fallbackCoerced.afterPreview,
-          warnings: [...coerced.warnings, "Fallback extraction was used to complete the item list."],
-        }
-      }
-    }
     if (!coerced.afterPreview?.prompt) {
       coerced.afterPreview = buildFallbackAfterPreview({
         hint: parsedInput.data.spaceHint ?? null,
@@ -750,6 +709,9 @@ export async function POST(req: Request) {
       suggestions: parsedOutput.suggestions ?? [],
       afterPreview: parsedOutput.afterPreview,
       warnings: parsedOutput.warnings ?? [],
+      debug: {
+        latencyMs: Date.now() - startedAt,
+      },
     })
   } catch (e) {
     const message = e instanceof Error ? e.message : "UNKNOWN"
@@ -784,7 +746,12 @@ export async function POST(req: Request) {
         afterPreview: fallbackAfter,
         warnings: [
           "AI recognition timed out. Returned fallback item candidates and organization plan.",
+          `DEBUG:VOLCE_TIMEOUT latencyMs=${Date.now() - startedAt}`,
         ],
+        debug: {
+          latencyMs: Date.now() - startedAt,
+          fallback: "VOLCE_TIMEOUT",
+        },
       })
     }
     if (/401/.test(message)) return Response.json({ ok: false, error: "VOLCE_AUTH_ERROR" }, { status: 502 })
