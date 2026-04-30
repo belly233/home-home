@@ -45,21 +45,21 @@ export async function POST(req: Request) {
     })
     type Item = (typeof items)[number]
 
-    const groupsMap = new Map<string, typeof items>()
+    const groupsMap = new Map<string, Item[]>()
     for (const item of items) {
       const key = `${item.spaceId}::${normalizeName(item.name)}`
-      const arr = groupsMap.get(key) ?? []
+      const arr: Item[] = groupsMap.get(key) ?? []
       arr.push(item)
       groupsMap.set(key, arr)
     }
 
     const duplicateGroups = Array.from(groupsMap.values())
       .filter((g) => g.length > 1)
-      .map((g: Array<(typeof items)[number]>) => ({
+      .map((g: Item[]) => ({
         spaceId: g[0].spaceId,
         normalizedName: normalizeName(g[0].name),
-        itemIds: g.map((i: (typeof items)[number]) => i.id),
-        itemNames: g.map((i: (typeof items)[number]) => i.name),
+        itemIds: g.map((i: Item) => i.id),
+        itemNames: g.map((i: Item) => i.name),
       }))
 
     if (dryRun) {
@@ -74,8 +74,8 @@ export async function POST(req: Request) {
     let mergedGroups = 0
     let removedItems = 0
     for (const group of Array.from(groupsMap.values()).filter((g) => g.length > 1)) {
-      const keeper = group[0]
-      const duplicates = group.slice(1)
+      const keeper: Item = group[0]
+      const duplicates: Item[] = group.slice(1)
       const duplicateIds = duplicates.map((d: Item) => d.id)
 
       const mergedQuantity = group
