@@ -64,10 +64,11 @@ export async function GET(req: Request) {
       },
       take: 200,
     })
+    type Item = (typeof items)[number]
 
     return NextResponse.json({
       ok: true,
-      items: items.map((i) => ({
+      items: items.map((i: Item) => ({
         ...i,
         tagNames: i.tags.map((t: { tag: { name: string } }) => t.tag.name),
       })),
