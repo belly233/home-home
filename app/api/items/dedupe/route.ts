@@ -44,6 +44,7 @@ export async function POST(req: Request) {
       },
     })
     type Item = (typeof items)[number]
+    type ItemTagRef = Item["tags"][number]
 
     const groupsMap = new Map<string, Item[]>()
     for (const item of items) {
@@ -102,8 +103,8 @@ export async function POST(req: Request) {
         duplicates.map((d) => d.imageDataUrl).find((v): v is string => Boolean(v)) ??
         null
 
-      const tagIdSet = new Set(group.flatMap((i) => i.tags.map((t) => t.tagId)))
-      const existingTagIdSet = new Set(keeper.tags.map((t) => t.tagId))
+      const tagIdSet = new Set(group.flatMap((i: Item) => i.tags.map((t: ItemTagRef) => t.tagId)))
+      const existingTagIdSet = new Set(keeper.tags.map((t: ItemTagRef) => t.tagId))
       const missingTagIds = Array.from(tagIdSet).filter((id) => !existingTagIdSet.has(id))
 
       await prisma.$transaction(async (tx: any) => {
