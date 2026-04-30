@@ -52,6 +52,7 @@ export const authOptions: NextAuthOptions = {
                   email: z.string().email(),
                   name: z.string().trim().min(1).optional(),
                 })
+                .passthrough()
                 .safeParse(credentials)
 
               if (!parsed.success) return null
