@@ -1,8 +1,10 @@
 import Link from "next/link"
-import { getServerSession } from "next-auth/next"
+import { getServerSession } from "next-auth"
 
 import { authOptions } from "@/app/lib/auth"
 import { Dashboard } from "@/app/ui/Dashboard"
+
+export const dynamic = "force-dynamic"
 
 export default async function Page() {
   const session = await getServerSession(authOptions)
@@ -101,9 +103,14 @@ export default async function Page() {
         </div>
         <div>
           {session?.user ? (
-            <Link className="hh-link" href="/api/auth/signout">
-              Sign out
-            </Link>
+            <nav className="flex items-center gap-4">
+              <Link className="hh-link" href="/me">
+                My account
+              </Link>
+              <Link className="hh-link" href="/api/auth/signout">
+                Sign out
+              </Link>
+            </nav>
           ) : (
             <nav className="flex items-center gap-4">
               <a className="hh-link" href="#features">
