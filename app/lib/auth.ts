@@ -19,6 +19,10 @@ export const authOptions: NextAuthOptions = {
   pages: { signIn: "/signin" },
   // Make local dev login work even if NEXTAUTH_SECRET isn't set.
   secret: process.env.NEXTAUTH_SECRET ?? (process.env.NODE_ENV !== "production" ? "dev-secret" : undefined),
+  // If NEXTAUTH_URL is set to an https domain during local http dev,
+  // NextAuth will default to Secure cookies which the browser won't store on http.
+  // Force Secure cookies only in production to keep local sign-in working.
+  useSecureCookies: process.env.NODE_ENV === "production",
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   providers: [
