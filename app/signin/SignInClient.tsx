@@ -1,17 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { signIn } from "next-auth/react"
 
 type Provider = { id: string; name: string; type: string; signinUrl?: string }
 type ProvidersResponse = Record<string, Provider>
-
-function buildSignInHref(providerId: string) {
-  const callbackUrl =
-    typeof window !== "undefined" ? window.location.origin : ""
-  const url = new URL(`/api/auth/signin/${providerId}`, callbackUrl || "http://localhost")
-  url.searchParams.set("callbackUrl", "/")
-  return url.pathname + "?" + url.searchParams.toString()
-}
 
 export function SignInClient() {
   const [providers, setProviders] = useState<ProvidersResponse | null>(null)
@@ -92,9 +85,16 @@ export function SignInClient() {
         {providerList
           .filter((p) => p.type !== "credentials")
           .map((p) => (
-            <a key={p.id} className="hh-btn-secondary" href={buildSignInHref(p.id)}>
+            <button
+              key={p.id}
+              className="hh-btn-secondary"
+              type="button"
+              onClick={() => {
+                void signIn(p.id, { callbackUrl: "/" })
+              }}
+            >
               Continue with {p.name}
-            </a>
+            </button>
           ))}
       </div>
 
